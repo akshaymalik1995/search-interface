@@ -1,8 +1,9 @@
 <script lang="ts">
   // Importing a custom icon component
-  import CloseIcon from "../icons/CloseIcon.svelte";
-  import LoadingIcon from "../icons/LoadingIcon.svelte";
-  import data from "../data";
+  import CloseIcon from "../../icons/CloseIcon.svelte";
+  import LoadingIcon from "../../icons/LoadingIcon.svelte";
+  import data from "../../data";
+  import Sidebar from "../../components/Sidebar.svelte";
 
   // Interface definitions for attributes, queries, and search state
   interface IATTRIBUTE {
@@ -124,32 +125,41 @@
 
     results: [],
 
+    // Method to initiate the search. Modify as per your needs.
     sendQuery() {
-      // Change it as per your needs
-      if (search.input){
-        search.addKeywords(search.input)
+      // If the search input has some text which is not added into the query, add it.
+      if (search.input) {
+        search.addKeywords(search.input);
       }
 
+      // Get the query string
       const q = search.prepareQuery();
+      // If the query string is empty, return
       if (!q) {
         alert("Search query is empty.");
         return;
       }
 
+      // For demo purposes. It should be replaced with sending request to the server
       let textKeywords: string[] = search.query["Text"] || [];
       let fileKeywords: string[] = search.query["Filename"] || [];
-      search.error = null;
-      search.status = "loading";
+
+      console.log("HELLO", textKeywords, fileKeywords)
+      search.error = null; // At the start of every request, error is set to null
+      search.status = "loading"; // The status of search is set to "loading"
       try {
         setTimeout(() => {
           search.results = data.filter((item) => {
             for (let keyword of textKeywords) {
-              if (item.text.includes(keyword)) return item;
+              if (item.text.includes(keyword)) return true;
             }
 
             for (let keyword of fileKeywords) {
-              if (item.text.includes(keyword)) return item;
+              if (item.filename.includes(keyword)) return true;
             }
+
+            return false
+
           });
           search.status = "done";
         }, 2000);
@@ -195,94 +205,102 @@
   }
 </script>
 
-<div class="flex gap-4 text-sm">
-  <div class="flex flex-col gap-2">
-    <label for="search-attrs" class="">Options</label>
-    <select
-      on:change={(e) => onSelectChange(e)}
-      id="search-attrs"
-      class="shadow p-2 focus:outline-none"
-      name=""
-    >
-      {#each search.attrs as attr}
-        <option
-          selected={search.activeAttributeName === attr.name}
-          value={attr.name}>{attr.name}</option
-        >
-      {/each}
-    </select>
+<div class="h-screen p-4 relative ">
+  <Sidebar />
+  <div class="ml-64">
+    <div class="flex gap-4 text-sm">
+    <div class="flex flex-col gap-2">
+      <label for="search-attrs" class="">Options</label>
+      <select
+        on:change={(e) => onSelectChange(e)}
+        id="search-attrs"
+        class="shadow p-2 focus:outline-none"
+        name=""
+      >
+        {#each search.attrs as attr}
+          <option
+            selected={search.activeAttributeName === attr.name}
+            value={attr.name}>{attr.name}</option
+          >
+        {/each}
+      </select>
+    </div>
+
+    <form class="flex flex-col grow gap-2" on:submit={(e) => onInputSubmit(e)}>
+      <label class="" for="search-keyword">Keywords</label>
+      <input
+      placeholder="science"
+        value={search.input}
+        on:input={(e) => onInput(e)}
+        class="p-2 shadow focus:outline-none"
+        id="search-keyword"
+        type="text"
+      />
+      <button type="submit"></button>
+    </form>
   </div>
 
-  <form class="flex flex-col grow gap-2" on:submit={(e) => onInputSubmit(e)}>
-    <label class="" for="search-keyword">Keywords</label>
-    <input
-      value={search.input}
-      on:input={(e) => onInput(e)}
-      class="p-2 shadow focus:outline-none"
-      id="search-keyword"
-      type="text"
-    />
-    <button type="submit"></button>
-  </form>
-</div>
-
-<div class="flex my-2 flex-wrap text-sm gap-4">
-  {#each Object.keys(search.query) as attr}
-    {#if search.query[attr].length}
-      <div class="flex items-center shadow">
-        <div class="bg-blue-100 p-2">{attr}</div>
-        <div class="flex text-sm px-2 items-center gap-2">
-          {#each search.query[attr] as keyword}
-            <div class="flex items-center gap-2">
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
-              <div
-                class="cursor-pointer"
-                on:click={() => search.editKeyword(attr, keyword)}
-              >
-                {keyword}
+  <div class="flex my-2 flex-wrap text-sm gap-4">
+    {#each Object.keys(search.query) as attr}
+      {#if search.query[attr].length}
+        <div class="flex items-center shadow">
+          <div class="bg-blue-100 p-2">{attr}</div>
+          <div class="flex text-sm px-2 items-center gap-2">
+            {#each search.query[attr] as keyword}
+              <div class="flex items-center gap-2">
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                  class="cursor-pointer"
+                  on:click={() => search.editKeyword(attr, keyword)}
+                >
+                  {keyword}
+                </div>
+                <!-- svelte-ignore a11y-click-events-have-key-events -->
+                <!-- svelte-ignore a11y-no-static-element-interactions -->
+                <div
+                  on:click={() => search.removeKeyword(attr, keyword)}
+                  class="cursor-pointer text-xs"
+                >
+                  <CloseIcon width={16} height={20} />
+                </div>
               </div>
-              <!-- svelte-ignore a11y-click-events-have-key-events -->
-              <!-- svelte-ignore a11y-no-static-element-interactions -->
-              <div
-                on:click={() => search.removeKeyword(attr, keyword)}
-                class="cursor-pointer text-xs"
-              >
-                <CloseIcon width={16} height={20} />
-              </div>
-            </div>
-          {/each}
+            {/each}
+          </div>
         </div>
+      {/if}
+    {/each}
+  </div>
+
+  <button
+    disabled={search.status === "loading"}
+    on:click={() => search.sendQuery()}
+    class="bg-blue-400 my-2 hover:bg-blue-300 py-1 rounded w-full"
+    >Search</button
+  >
+
+  <!-- RESULTS -->
+
+  <div class="flex w-full my-4 flex-col gap-4">
+    {#if search.status === "done" && !search.error}
+      {#each search.results as item}
+        <div class="rounded border">
+          <div class="bg-gray-200 p-2">{item.filename}</div>
+          <div class=" p-2">{item.text}</div>
+        </div>
+      {:else}
+        <div class="text-sm">No Results Found</div>
+      {/each}
+    {/if}
+    {#if search.status === "done" && search.error}
+      <div class="text-sm text-red-500">{search.error}</div>
+    {/if}
+    {#if search.status === "loading"}
+      <div class="flex justify-center w-full">
+        <div class="w-8 h-8"><LoadingIcon /></div>
       </div>
     {/if}
-  {/each}
-</div>
-
-<button
-  disabled={search.status === "loading"}
-  on:click={() => search.sendQuery()}
-  class="bg-blue-400 my-2 hover:bg-blue-300 py-1 rounded w-full">Search</button
->
-
-<!-- RESULTS -->
-
-<div class="flex w-full my-4 flex-col gap-4">
-  {#if search.status === "done" && !search.error}
-    {#each search.results as item}
-      <div class="rounded border">
-        <div class="bg-gray-200 p-2">{item.filename}</div>
-        <div class=" p-2">{item.text}</div>
-      </div>
-    {:else}
-      <div class="text-sm" >No Results Found</div>
-    {/each}
-  {/if}
-  {#if search.status === "done" && search.error}
-    <div class="text-sm text-red-500" >{search.error}</div>
-  {/if}
-  {#if search.status === "loading"}
-    <div class="flex justify-center w-full">
-      <div class="w-16 h-16"><LoadingIcon width={8} height={8}  /></div>
-    </div>
-  {/if}
+  </div>
+  </div>
+  
 </div>
