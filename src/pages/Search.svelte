@@ -278,7 +278,7 @@
     {/each}
   {/if}
   {#if search.status === "done" && search.error}
-    <div>Failed!</div>
+    <div class="text-sm text-red-500" >{search.error}</div>
   {/if}
   {#if search.status === "loading"}
     <div class="flex justify-center w-full">
